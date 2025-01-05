@@ -4,6 +4,11 @@ Welcome, students! If you find this project useful, don't forget to leave a star
 
 A **console-based application** built in C for managing patient records and scheduling appointments in a doctor's cabin. It utilizes **linked lists** for dynamic data storage and **file handling** to ensure data persistence.
 
+---
+
+## Screenshot
+
+![Screenshot](screen.png)
 
 ---
 
