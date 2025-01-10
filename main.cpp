@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h> // For getting today's date
+#include <conio.h> // For hash of password ( security reasons )
 
 // Patient structure
 typedef struct Patient {
@@ -132,12 +134,87 @@ void scheduleRendezvous(int patientId, char date[], char time[]) {
     }
 }
 
+// Function to edit an appointment
+void editAppointment(int patientId, char newDate[], char newTime[]) {
+    Rendezvous* temp = appointments;
+    while (temp != NULL) {
+        if (temp->patientId == patientId) {
+            strcpy(temp->date, newDate);
+            strcpy(temp->time, newTime);
+            printf("Appointment updated successfully!\n");
+            return;
+        }
+        temp = temp->next;
+    }
+    printf("Appointment not found!\n");
+}
+
+// Function to delete an appointment
+void deleteAppointment(int patientId) {
+    Rendezvous* temp = appointments;
+    Rendezvous* prev = NULL;
+
+    while (temp != NULL) {
+        if (temp->patientId == patientId) {
+            if (prev == NULL) {
+                appointments = temp->next;
+            } else {
+                prev->next = temp->next;
+            }
+            free(temp);
+            printf("Appointment deleted successfully!\n");
+            return;
+        }
+        prev = temp;
+        temp = temp->next;
+    }
+    printf("Appointment not found!\n");
+}
+
 // Function to display all appointments
 void displayRendezvous() {
     Rendezvous* temp = appointments;
     while (temp != NULL) {
         printf("Patient ID: %d, Date: %s, Time: %s\n", temp->patientId, temp->date, temp->time);
         temp = temp->next;
+    }
+}
+
+// Function to search appointments by date
+void searchAppointmentsByDate(char date[]) {
+    Rendezvous* temp = appointments;
+    int found = 0;
+    while (temp != NULL) {
+        if (strcmp(temp->date, date) == 0) {
+            printf("Patient ID: %d, Time: %s\n", temp->patientId, temp->time);
+            found = 1;
+        }
+        temp = temp->next;
+    }
+    if (!found) {
+        printf("No appointments found for the given date.\n");
+    }
+}
+
+// Function to display today's appointments
+void displayTodaysAppointments() {
+    // Get today's date
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    char today[20];
+    sprintf(today, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+
+    Rendezvous* temp = appointments;
+    int found = 0;
+    while (temp != NULL) {
+        if (strcmp(temp->date, today) == 0) {
+            printf("Patient ID: %d, Time: %s\n", temp->patientId, temp->time);
+            found = 1;
+        }
+        temp = temp->next;
+    }
+    if (!found) {
+        printf("No appointments found for today.\n");
     }
 }
 
@@ -217,12 +294,44 @@ void loadAppointmentsFromFile(const char* filename) {
     printf("Appointments loaded from file successfully!\n");
 }
 
-// Function for program exit
+// Function to handle program exit
 void onExit() {
     printf("Saving data before exiting...\n");
     savePatientsToFile("patients.txt"); // Save patients to file
     saveAppointmentsToFile("appointments.txt"); // Save appointments to file
-    printf("Data saved. Exiting the program. Goodbye!\n"); // Exite
+    printf("Data saved. Exiting the program. Goodbye!\n");
+}
+
+// Function to hide password input
+void hidePassword(char password[]) {
+    char ch;
+    int i = 0;
+    while ((ch = getch()) != '\r') { // '\r' is the Enter key
+        if (ch == '\b' && i > 0) { // Handle backspace
+            printf("\b \b");
+            i--;
+        } else if (ch != '\b') {
+            password[i++] = ch;
+            printf("*");
+        }
+    }
+    password[i] = '\0'; // Null-terminate the password
+    printf("\n");
+}
+
+// Function to authenticate user
+int authenticate() {
+    char password[20];
+    printf("Enter password: ");
+    hidePassword(password);
+
+    // Hardcoded password for security process
+    if (strcmp(password, "ademAdmin") == 0 || strcmp(password, "mahaAdmin") == 0) {
+        return 1; // Authentication successful
+    } else {
+        printf("Incorrect password. Access denied.\n");
+        return 0; // Authentication failed
+    }
 }
 
 // Main function
@@ -230,18 +339,25 @@ int main() {
     int choice, id;
     char name[50], problem[100], date[20], time[10];
 
-    // Auto data load on start
+    // Authenticate user
+    if (!authenticate()) {
+        return 0; // Exit if authentication fails
+    }
+
+    // Load data automatically when the program starts
+    printf("Logged in successfully !\n");
+    printf("\n");
     printf("Loading data...\n");
     loadPatientsFromFile("patients.txt"); // Load patients from file
     loadAppointmentsFromFile("appointments.txt"); // Load appointments from file
+    getchar(); // Wait for Enter
 
     // Register the exit function
     atexit(onExit);
 
     while (1) {
-        clearScreen(); // Clear the screen
-        
-        // Display the menu
+        // Clear the screen and display the menu
+        clearScreen();
         printHeader();
         printf("1. Add Patient\n");
         printf("2. Delete Patient\n");
@@ -249,14 +365,18 @@ int main() {
         printf("4. Display All Patients\n");
         printf("5. Schedule Rendezvous\n");
         printf("6. Display Rendezvous\n");
-        printf("7. Exit\n");
+        printf("7. Edit Appointment\n");
+        printf("8. Delete Appointment\n");
+        printf("9. Search Appointments by Date\n");
+        printf("10. Display Today's Appointments\n");
+        printf("11. Exit\n");
         printFooter();
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
         switch (choice) {
             case 1: // Add Patient
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== Add Patient ==========\n");
                 printf("Enter ID: ");
@@ -270,7 +390,7 @@ int main() {
                 break;
 
             case 2: // Delete Patient
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== Delete Patient ==========\n");
                 printf("Enter ID to delete: ");
@@ -279,7 +399,7 @@ int main() {
                 break;
 
             case 3: { // Search Patient
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== Search Patient ==========\n");
                 printf("Enter ID to search: ");
@@ -295,14 +415,14 @@ int main() {
             }
 
             case 4: // Display All Patients
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== All Patients ==========\n");
                 displayPatients();
                 break;
 
             case 5: // Schedule Rendezvous
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== Schedule Rendezvous ==========\n");
                 printf("Enter Patient ID: ");
@@ -316,13 +436,51 @@ int main() {
                 break;
 
             case 6: // Display Rendezvous
-                clearScreen(); // Clear the screen
+                clearScreen();
                 printHeader();
                 printf("========== All Rendezvous ==========\n");
                 displayRendezvous();
                 break;
 
-            case 7: // Exit
+            case 7: // Edit Appointment
+                clearScreen();
+                printHeader();
+                printf("========== Edit Appointment ==========\n");
+                printf("Enter Patient ID: ");
+                scanf("%d", &id);
+                printf("Enter New Date (DD/MM/YYYY): ");
+                scanf("%s", date);
+                printf("Enter New Time (HH:MM): ");
+                scanf("%s", time);
+                editAppointment(id, date, time);
+                break;
+
+            case 8: // Delete Appointment
+                clearScreen();
+                printHeader();
+                printf("========== Delete Appointment ==========\n");
+                printf("Enter Patient ID: ");
+                scanf("%d", &id);
+                deleteAppointment(id);
+                break;
+
+            case 9: // Search Appointments by Date
+                clearScreen();
+                printHeader();
+                printf("========== Search Appointments by Date ==========\n");
+                printf("Enter Date (DD/MM/YYYY): ");
+                scanf("%s", date);
+                searchAppointmentsByDate(date);
+                break;
+
+            case 10: // Display Today's Appointments
+                clearScreen();
+                printHeader();
+                printf("========== Today's Appointments ==========\n");
+                displayTodaysAppointments();
+                break;
+
+            case 11: // Exit
                 printf("Exiting the program. Goodbye!\n");
                 exit(0);
 
